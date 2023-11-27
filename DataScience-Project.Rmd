@@ -1,0 +1,25 @@
+---
+title: "DataScience-Project"
+author: "Layal Ghryani - Rayanah Alsubaie - Shaymaa Aldabbagh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r }
+library(tidyverse)
+Spotify <- read.csv("spotify_songs.csv")
+```
+```{r, height(10000),Width(40)}
+# Load the necessary libraries
+library(ggplot2)
+ggplot(spotify_songs, aes(x = playlist_genre, y = track_popularity, fill = playlist_genre)) +
+  geom_point() +
+  labs(title = "Playlist Popularity Comparison") +
+  facet_wrap(~playlist_name, scales = "free_y", ncol = 2)
+
+```
+
