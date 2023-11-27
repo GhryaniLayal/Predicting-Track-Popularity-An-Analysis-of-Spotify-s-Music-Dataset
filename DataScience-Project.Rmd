@@ -10,16 +10,113 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r }
+# Install and load necessary packages
+if (!require("shiny")) install.packages("shiny")
+library(shiny)
+if (!require("tidyverse")) install.packages("tidyverse")
 library(tidyverse)
-Spotify <- read.csv("spotify_songs.csv")
-```
-```{r, height(10000),Width(40)}
-# Load the necessary libraries
+if (!require("ggplot2")) install.packages("ggplot2")
 library(ggplot2)
-ggplot(spotify_songs, aes(x = playlist_genre, y = track_popularity, fill = playlist_genre)) +
-  geom_point() +
-  labs(title = "Playlist Popularity Comparison") +
-  facet_wrap(~playlist_name, scales = "free_y", ncol = 2)
+if (!require("scales")) install.packages("scales")
+library(scales)
+if (!require("caret")) install.packages("caret")
+library(caret)  
+if (!require("viridis")) install.packages("viridis")
+library(viridis)
+```
 
+```{r}
+# Read the CSV file
+Spotify <- read.csv("spotify_songs.csv")
+Spotify2 <- read.csv("spotify.csv")
+```
+
+
+```{r}
+# Load the required packages
+library(shiny)
+library(htmltools)
+
+# Define the UI
+ui <- fluidPage(
+  # Custom title and names
+  tags$head(
+    tags$title("CS 30721: Data Science - Shiny App"),
+    tags$style(
+      HTML("
+        #title {
+          text-align: center;
+          margin-top: 20px;
+        }
+      ")
+    )
+  ),
+  
+  wellPanel(
+    tags$h1("Predicting Track Popularity: An Analysis of Spotify’s Music Dataset", id = "title"),
+    # Introduction
+    tags$hr(),
+    HTML("<div style='text-align: center;'>
+      <p>Layal Ghryani, Rayanah Alsubaie, Shaymaa Aldabbagh</p>
+      <p>Instructor: Dr. Zain Bafaqeh</p>
+      <p>CS 30721: Data Science</p>
+    </div>"),
+    # Add the image
+    tags$div(
+      style = "text-align: center;",
+      img(src = "spot.jpg", width = "400px")
+    )
+  ),
+  
+  mainPanel(
+    tabsetPanel(
+      tabPanel("Data Pre-processing",
+               # Add content for Data Pre-processing tab here
+      ),
+      
+      tabPanel("Exploratory Data Analysis",
+               tabsetPanel(
+                 tabPanel("Top 10 Popular Songs", 
+                          plotOutput("top10PopularPlot")),
+                 tabPanel("Top 10 Least Popular Songs", 
+                          tableOutput("top10LeastPopularTable")),
+                 tabPanel("Correlation Heatmap", 
+                          plotOutput("correlationHeatmap")),
+                 tabPanel("Loudness vs. Energy", 
+                          plotOutput("loudnessEnergyPlot")),
+                 tabPanel("Popularity vs. Acousticness", 
+                          plotOutput("popularityAcousticnessPlot")),
+                 tabPanel("Change in Duration Over Years", 
+                          plotOutput("durationOverYearsPlot")),
+                 tabPanel("Average Duration by Genre", 
+                          tableOutput("averageDurationByGenreTable")),
+                 tabPanel("Top 15 Artists with Most Songs", 
+                          plotOutput("top15ArtistsPlot"))
+               )
+      ),
+      
+      tabPanel("ML Model",
+              tabsetPanel(
+               tabPanel("Machine Learning Results",
+                        tableOutput("machineLearningResultsTable"))
+              )
+      )
+    ),
+    
+    # Add HTML content using HTML tag functions
+    br(),
+    h3("Additional Information"),
+    p("This Shiny app provides insights into the analysis of Spotify's music dataset."),
+    p("Explore different visualizations and tables to understand trends and correlations.")
+  )
+)
+# Define the server
+server <- function(input, output) {
+  # Server logic goes here
+}
+
+
+# Run the Shiny app
+shinyApp(ui, server)
 ```
 
