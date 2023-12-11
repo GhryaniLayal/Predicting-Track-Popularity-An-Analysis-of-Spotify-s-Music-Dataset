@@ -1,0 +1,675 @@
+---
+title: "DataScience-Project without Shiny"
+author: "Layal Ghryani - Rayanah Alsubaie and Shaymaa Aldabbagh "
+date: "`r Sys.Date()`"
+output: 
+   pdf_document: default
+   html_document: default
+   word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  warning = TRUE, # show warnings
+  message = TRUE, # show messages
+  error = TRUE, # do not interrupt generation in case of errors,
+  echo = TRUE  # show R code
+)
+```
+\tableofcontents
+\newpage
+
+\section{Introduction}
+The development of music streaming services has revolutionized the music business by providing consumers with access to an extensive song collection. Spotify has emerged as the leading platform in the worldwide music streaming business, offering millions of tracks and securing a substantial market share. Due to its large user base and comprehensive dataset, Spotify offers a special chance to forecast and analyze track popularity. Music supporters, record labels, and musicians are all very interested in learning what makes a song popular. Precisely anticipating the level of popularity of songs can provide important information about the tastes of the audience, advertising tactics, and the general workings of the music business. This work intends to construct a prediction algorithm that can evaluate track popularity by utilizing Spotify's Music Dataset. 
+
+
+\section{Problem Question and Background}
+Using Spotify's dataset to forecast track popularity is the study's research question/problem. This subject has in fact been investigated in the past, with a number of studies looking at the connection between track popularity, contextual factors, and auditory qualities. Certain aural characteristics, such as tempo, energy, and danceability, have been linked in certain studies to the popularity of a music. Track popularity has also been proven to be influenced by contextual factors, such as playlist inclusion, album release patterns, and artist popularity. But there's still a lot to learn, especially when it comes to how audio and contextual information work together in comprehensive prediction models. Furthermore, research is still being done on the precise weight and interactions of these factors.
+
+```{r}
+if (!require("tidyverse")) install.packages("tidyverse")
+library(tidyverse)
+if (!require("ggplot2")) install.packages("ggplot2")
+library(ggplot2)
+if (!require("scales")) install.packages("scales")
+library(scales)
+if (!require("caret")) install.packages("caret")
+library(caret)  
+if (!require("viridis")) install.packages("viridis")
+library(viridis)
+if (!require("treemap")) install.packages("treemap")
+library(treemap)
+if (!require("htmltools")) install.packages("htmltools")
+library(htmltools)
+if (!require("tm")) install.packages("tm")
+library(tm)
+if (!require("readr")) install.packages("readr")
+library(readr)
+if (!require("ggcorrplot")) install.packages("ggcorrplot")
+library(ggcorrplot)
+if (!require("nnet")) install.packages("nnet")
+library(nnet)
+if (!require("ISLR")) install.packages("ISLR")
+library(ISLR) 
+if (!require("dplyr")) install.packages("dplyr")
+library(dplyr)
+
+```
+
+```{r}
+# Load datasets
+Spotify <- read.csv("spotify_songs.csv")
+Spotify2 <- read.csv("spotify.csv")
+```
+
+Data Pre-Processing:
+
+```{r}
+str(Spotify)
+```
+
+```{r}
+str(Spotify2)
+```
+Let us check for the dimensions of our spotify dataset:
+```{r}
+# Output dataset dimensions
+cat("Dimensions of Spotify:", dim(Spotify), "\n")
+cat("Dimensions of Spotify2:", dim(Spotify2), "\n")
+```
+```{r}
+# Identifying missing values across columns
+col_miss_Spotify <- colSums(is.na(Spotify))
+if (any(col_miss_Spotify > 0)) {
+  cat("Missing values in Spotify:", col_miss_Spotify[col_miss_Spotify > 0], "\n")
+} else {
+  cat("No missing values in Spotify\n")
+}
+```
+
+```{r}
+col_miss_Spotify2 <- colSums(is.na(Spotify2))
+if (any(col_miss_Spotify2 > 0)) {
+  cat("Missing values in Spotify2:", col_miss_Spotify2[col_miss_Spotify2 > 0], "\n")
+} else {
+  cat("No missing values in Spotify2\n")
+}
+```
+
+
+```{r}
+# Find number of duplicate values
+duplicate_obs_Spotify <- duplicated(Spotify)
+cat("Number of duplicate observations in Spotify:", sum(duplicate_obs_Spotify), "\n")
+
+duplicate_obs_Spotify2 <- duplicated(Spotify2)
+cat("Number of duplicate observations in Spotify2:", sum(duplicate_obs_Spotify2), "\n")
+```
+
+```{r}
+# Check for duplicate track ID
+duplicate_id_Spotify <- duplicated(Spotify$track_id)
+cat("Number of duplicate track IDs in Spotify:", sum(duplicate_id_Spotify), "\n")
+```
+
+```{r}
+# Checking summary of numerical variables
+Spotify_num <- Spotify %>% select_if(is.numeric)
+cat("Summary of numerical variables in Spotify:\n")
+print(summary(Spotify_num))
+
+```
+```{r}
+
+Spotify2_num <- Spotify2 %>% select_if(is.numeric)
+cat("Summary of numerical variables in Spotify2:\n")
+print(summary(Spotify2_num))
+```
+Below is the detailed data dictionary to understand all the variables present in the dataset:
+\section{Data}
+Track popularity is the outcome variable under investigation and prediction in this study. Track popularity is a metric that evaluates a song's relative popularity within the Spotify ecosystem using data like the ones below:
+\item track_name - Song Name
+\item track_popularity - Song Popularity (0-100) where higher is better
+\item playlist_genre - Playlist genre
+\item danceability - Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity.
+\item energy - Energy is a measure from 0.0 to 1.0 and represents a perceptual measure of intensity and activity. Typically, energetic tracks feel fast, loud, and noisy.
+\item key - The estimated overall key of the track. Integers map to pitches using standard Pitch Class notation .
+\item loudness -The overall loudness of a track in decibels (dB). 
+Loudness values are averaged across the entire track and are useful for comparing relative loudness of tracks.	
+\item mode - Mode indicates the modality (major or minor) of a track, the type of scale from which its melodic content is derived. Major is represented by 1 and minor is 0.	
+\item speechiness - Speechiness detects the presence of spoken words in a track. 
+\item acousticness - A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic.
+\item instrumentalness -	Predicts whether a track contains no vocals. “Ooh” and “aah” sounds are treated as instrumental in this context.
+\item liveness - Detects the presence of an audience in the recording. 
+Higher liveness values represent an increased probability that the track was performed live.
+\item valence -	A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track.
+\item tempo -	The overall estimated tempo of a track in beats per minute (BPM).
+\item duration_ms - Duration of song in milliseconds
+
+Exploratory Data Analysis (EDA):
+\Section {Popularity Analysis}
+Let us start with the popularity analysis. For the purpose of this study, I am planning to classify track popularity attribute into different classes of low,medium and high popularity. As the dictionary mentions, track popularity is a value between 0 and 100. I am classifying the group as follows:
+
+high - track popularity greater than 75
+medium - track popularity between 30 and 75
+low - track popularity less than 30
+```{r}
+# Popularity Analysis
+Spotify <- Spotify %>%
+  mutate(popularity = case_when(
+    track_popularity <= 30 ~ "low",
+    track_popularity > 30 & track_popularity <= 75 ~ "medium",
+    track_popularity > 75 ~ "high"
+  ))
+
+# Top tracks in the dataset
+popular_track <- Spotify %>%
+  filter(popularity == "high") %>%
+  arrange(desc(track_popularity)) %>%
+  distinct(track_name, track_popularity)
+
+cat("Top tracks in Spotify with high popularity:\n")
+print(head(popular_track, 10))
+```
+
+```{r}
+# Create a summary of top artists within each playlist genre
+artist_genre <- Spotify %>%
+  dplyr::select(playlist_genre, track_artist, track_popularity) %>%
+  group_by(playlist_genre, track_artist) %>%
+  summarise(n = n()) %>%
+  top_n(10, n)
+
+cat("Top 10 Track Artists within each Playlist Genre:\n")
+print(artist_genre)
+```
+
+
+
+```{r}
+# Create a bar plot with varied colors
+top_10_popular_songs <- head(Spotify[order(-Spotify$track_popularity),
+                                     c("track_name", "track_artist", 
+                                       "track_popularity")], 10)
+
+ggplot(top_10_popular_songs, aes(x = track_name, y = track_popularity, 
+                                 fill = track_artist)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 10 Popular Songs",
+       x = "Song",
+       y = "Popularity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+Top artist by genre
+
+The top artists list features many edm artists. This may be due to the high popularity of edm songs. So, what about the artists who creates songs in other genres.We will try to find out who are the top artists in each genre.We can use a tree map to analyze this.
+```{r}
+library(ggplot2)
+library(dplyr)
+library(treemap)
+
+# Load the dataset
+Spotify <- read.csv("spotify_songs.csv")  # Replace "data.csv" with the actual file name and path
+
+# Create a summary of top artists within each playlist genre
+artist_genre <- Spotify %>%
+  dplyr::select(playlist_genre, track_artist, track_popularity) %>%
+  group_by(playlist_genre, track_artist) %>%
+  summarise(n = n()) %>%
+  top_n(10, n)
+
+# Create a treemap visualization
+tm <- treemap(artist_genre, index = c("playlist_genre", "track_artist"), vSize = "n", vColor = 'playlist_genre', palette = viridisLite::viridis(6), title = "Top 10 Track Artists within each Playlist Genre")
+
+# Display the treemap
+print(tm) 
+```
+Above, treemap depicts top 10 track artists with in each of the playlist genre. The size of the boxes in treemap corresponds to the count tracks for the artists.
+For genre edm, rock, pop, rap, latin and r&b, the top track artist are Martin Garrix, Queen, The Chainsmoker, Logic, Don Omar and Bobby Brown respectively.
+
+
+
+One of Spotify’s most popular features is its Discover Playlist, a playlist that is generated each week based on a user’s listening habits. As a Spotify user I have found these playlists to be extremely accurate and useful. I wanted to make a try to build a basic version of it, a song recommendation engine based on different attributes as follows:
+
+Based on Genre: Songs will be displayed as per the user preferred genre and rating scale.
+Based on Artists: Songs will be filtered as per the artist preference of the user and the rating scale.
+Based on Mood: Songs will be filtered as per the mood preference and rating scale specified by the user. For this purpose, songs have been classified into different groups like Gym(the songs with high energy),Cheerful(the songs with high valence),Party/Dance(the songs with high danceability) and Others.
+
+```{r}
+# Select the variables for correlation
+variables <- c('danceability', 'energy', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms')
+
+# Compute the correlation matrix
+correlation_matrix <- cor(Spotify[, variables])
+
+# Create a heatmap
+library(ggplot2)
+library(reshape2)
+
+melted_correlation <- melt(correlation_matrix)
+ggplot(data = melted_correlation, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "darkblue", high = "pink") +
+  theme_minimal() +
+  labs(title = "Correlation Heatmap") +
+  geom_text(aes(label = round(value, 2)), color = "white", size = 3) + coord_flip()
+```
+
+```{r}
+library(ggplot2)
+library(scales)
+
+# Assuming you have a Spotify frame called 'Spotify' with columns: loudness and energy
+
+ggplot(Spotify, aes(x = loudness, y = energy)) +
+  geom_point(color = "#FF6F00") +  # Set the color of the points to orange
+  geom_smooth(method = "lm", color = "#FFAB00", se = FALSE) +  # Set the color of the smoother line to a lighter shade of orange
+  scale_color_manual(values = c("#FF6F00", "#FFAB00")) +  # Match the colors for points and line
+  labs(title = "Correlation between Loudness and Energy") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(data = Spotify) + 
+      geom_point(mapping = aes(x = duration_ms, y = track_popularity,
+                               color = playlist_genre, alpha = 0.12))
+```
+
+```{r}
+library(ggplot2)
+library(scales)
+
+# Assuming you have a Spotify frame called 'Spotify' with columns: track_popularity and acousticness
+
+ggplot(Spotify, aes(x = track_popularity, y = acousticness)) +
+  geom_point(color = "#1F77B4") +  # Set the color of the points to a blue shade
+  geom_smooth(method = "lm", color = "#FF7F0E", se = FALSE) +  # Set the color of the smoother line to an orange shade
+  scale_color_manual(values = c("#1F77B4", "#FF7F0E")) +  # Match the colors for points and line
+  labs(title = "Correlation between Popularity and Acousticness") +
+  theme_minimal()
+```
+```{r}
+Spotify$track_album_release_year <- as.numeric(format(as.Date(Spotify$track_album_release_date, "%m/%d/%y"), "%Y"))
+
+# Calculate the average duration for each year
+average_duration_by_year <- aggregate(duration_ms ~ track_album_release_year, Spotify, mean)
+
+# Plot the change in duration over years
+library(ggplot2)
+ggplot(data = average_duration_by_year, aes(x = track_album_release_year, y = duration_ms)) +
+  geom_line() +
+  labs(x = "Year", y = "Average Duration (ms)", title = "Change in Duration of Songs over Years")
+
+```
+
+```{r}
+# Calculate the average duration for each genre
+average_duration_by_genre <- aggregate(duration_ms ~ playlist_genre, Spotify, mean)
+
+# Display the average duration for each genre
+print(average_duration_by_genre)
+```
+```{r}
+most_songs <- Spotify %>%
+  group_by(track_artist) %>%
+  summarize(total_songs = n_distinct(track_name)) %>%
+  arrange(desc(total_songs)) %>%
+  slice(1:15) %>%
+  ggplot(aes(x = track_artist, y = total_songs, color = track_artist)) +
+  geom_segment(aes(x = track_artist, xend = track_artist, y = 0, yend = total_songs)) +
+  geom_point(size = 2, color = "maroon") +
+  scale_color_viridis(discrete = TRUE, guide = "none", option = "E") +
+  theme_light(base_size = 12, base_family = "HiraKakuProN-W3") +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+  labs(title = "Top 15 Artists with Most Songs",
+       x = "Artist",
+       y = "Total Songs") +
+  coord_flip()
+
+most_songs
+```
+```{r}
+most_listened <- Spotify %>%
+  group_by(track_artist) %>%
+  mutate(track_artist = iconv(track_artist, to = "UTF-8")) %>%
+  summarize(listenedHours = sum(duration_ms) / 1000 / 3600) %>%
+  arrange(desc(listenedHours)) %>%
+  slice(1:15) %>%
+  ggplot(aes(x = track_artist, y = listenedHours, color = track_artist)) +
+  geom_segment(aes(x = track_artist, xend = track_artist, y = 0, yend = listenedHours)) +
+  geom_point(size = 2, color = "cyan3") +
+  scale_color_viridis(discrete = TRUE, guide = FALSE, option = "C") +
+  theme_light(base_size = 12, base_family = "HiraKakuProN-W3") +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+  labs(title = "Top 15 most listened artists") +
+  xlab("") +
+  ylab("Hours") +
+  coord_flip()
+
+most_listened
+```
+
+```{r}
+# Count the number of songs for each genre
+genre_counts <- table(Spotify$playlist_genre)
+
+# Create a bar graph of the genre counts
+barplot(genre_counts, main = "Number of Songs by Genre", xlab = "Genre", ylab = "Count")
+```
+
+```{r}
+# Calculate the average popularity by genre
+avg_popularity <- Spotify %>%
+  group_by(playlist_genre) %>%
+  summarise(avg_popularity = mean(track_popularity))
+
+# Plot the average popularity by genre
+ggplot(avg_popularity, aes(x = playlist_genre, y = avg_popularity)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(x = "Genre", y = "Average Popularity", title = "Average Popularity by Genre")
+```
+
+```{r}
+# Create the scatter plot
+ggplot(Spotify, aes(x = valence, y = energy, color = track_name)) +
+  geom_jitter(show.legend = FALSE) +
+  scale_color_viridis(discrete = TRUE, option = "D") +
+  geom_vline(xintercept = 0.5) +
+  geom_hline(yintercept = 0.5) +
+  scale_x_continuous(breaks = seq(0, 1, 0.25)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25)) +
+  labs(title = "How positive is your music?") +
+  theme_light()
+```
+
+```{r}
+
+library(ggplot2)
+
+# Assuming you have the Spotify frame 'spotify_songs' with columns: track_name, danceability, and energy
+
+track_names <- Spotify$track_name
+danceability <- Spotify$danceability
+energy <- Spotify$energy
+
+spotify_data <- data.frame(
+  track_name = track_names,
+  danceability = danceability,
+  energy = energy
+)
+
+spotify_data %>%
+  ggplot(aes(x = danceability, y = energy, color = track_name)) +
+  geom_jitter(show.legend = FALSE) +
+  scale_color_viridis(discrete = TRUE, option = "C") +
+  labs(title = "Workout vibes") +
+  theme_light()
+```
+
+```{r}
+# Read the dataset
+Spotify <- read.csv("spotify_songs.csv")
+
+# Create a scatter plot of population versus danceability
+ggplot(Spotify, aes(x = track_popularity, y = danceability)) +
+  geom_point() +
+  labs(x = "Popularity", y = "Danceability") +
+  ggtitle("Population versus Danceability")
+```
+
+```{r}
+# Load required packages
+library(ggplot2)
+library(dplyr)
+
+# Load the Spotifyset
+Spotify <- read.csv("spotify_songs.csv")  # Replace "Spotify.csv" with the actual file name and path
+
+# Explore the Spotifyset
+head(Spotify)  # Check the structure and contents of the Spotifyset
+
+# Scatter plot: Popularity vs Duration
+ggplot(Spotify, aes(x = track_popularity, y = duration_ms)) +
+  geom_point() +
+  labs(x = "Track Popularity", y = "Duration (ms)") +
+  ggtitle("Popularity vs Duration")
+
+```
+```{r}
+# Load required packages
+library(ggplot2)
+library(dplyr)
+
+# Load the Spotifyset
+Spotify <- read.csv("spotify_songs.csv")  # Replace "Spotify.csv" with the actual file name and path
+
+# Explore the Spotifyset
+head(Spotify)  # Check the structure and contents of the Spotifyset
+
+# Scatter plot: Popularity vs Duration
+ggplot(Spotify, aes(x = loudness, y = danceability)) +
+  geom_point() +
+  labs(x = "Loudness", y = "Danceability") +
+  ggtitle("Loudness vs Danceability")
+
+```
+```{r}
+# Read the dataset
+Spotify <- read.csv("spotify_songs.csv")
+
+# Create a scatter plot of population versus danceability
+ggplot(Spotify, aes(x = track_popularity, y = loudness)) +
+  geom_point() +
+  labs(x = "Popularity", y = "Loudness") +
+  ggtitle("Population versus Loudness")
+```
+```{r}
+# Read the dataset
+Spotify <- read.csv("spotify_songs.csv")
+
+# Create a scatter plot of population versus danceability
+ggplot(Spotify, aes(x = track_popularity, y = tempo)) +
+  geom_point() +
+  labs(x = "Popularity", y = "Tempo") +
+  ggtitle("Population versus Tempo")
+```
+
+
+Though the structure of each song is in some way unique, there are definitely some common threads happening. Let us check for the correlation between various attributes of a song.
+
+```{r}
+# Extract relevant columns (attributes)
+attributes <- Spotify[c("acousticness", "loudness", "valence", "danceability", "liveness", "energy", "instrumentalness","key","tempo","duration_ms","speechiness")]
+
+# Create a correlation matrix
+att_cor <- cor(attributes)
+
+# Plot the correlation matrix using ggcorrplot
+ggcorrplot(att_cor, type = "lower", hc.order = TRUE, colors = c("orange", "lightyellow", "lightblue"))
+```
+From the correlation plot, we can observe that:
+
+There exists a high positive correlation between energy and loudness.
+
+There exists a high negative correlation between energy and acousticness.
+
+There are moderate correlation between loudness and acousticness, and between valence and danceability.
+
+We can also observe that speechiness, tempo and key have no strong correlation with track popularity. Thus, we can conclude that popularity is influenced by the following charateristics:
+
+acousticness
+loudness
+valence
+danceability
+liveness
+energy
+instrumentalness
+This study can be helpful to us when we try to build a predictive model.
+
+
+\section {MACHINE LEARNING}
+
+In this section, We  trying to come up with a model which can predict the popularity of a song given all other attributes. More particulary, the model can help to predict in which popularity class: low,medium or high does the song feature by comparing its other attributes.
+
+Logistic Regression with multinomial(NNET) variables
+
+We can make use of a logistic regression with multinomial variables as there are three different popularity classes in our response variable. We have seen from the correlation plot during our exploratory data analysis that the track popularity has correlation with variables : acousticness, loudness, valence, danceability, liveness, energy and instrumentalness. So it is a good idea to build the model by fitting the popularity class with all these attributes. First step is to randomly split the whole dataset into training (75%) and testing (25%) set for model validation. I would train the model with the training set and then test the perdictive capability of the model using the testing set.
+
+```{r}
+Spotify <- Spotify %>%mutate(popularity = case_when(track_popularity <= 30 ~ "low",
+                                track_popularity > 30 & track_popularity <= 75  ~ "medium",
+                                track_popularity > 75 ~ "high"))
+```
+
+```{r}
+spotify_train <- Spotify[c(12:15,17,18:21,22:24)]
+set.seed(123)
+train_idx <- sample(nrow(spotify_train), .70*nrow(spotify_train))
+
+train <- spotify_train[train_idx,]
+test <- spotify_train[-train_idx,]
+```
+Now , let us perform the model fitting and analysis: When we build logistic models we need to set one of the levels of the dependent variable as a baseline. We achieve this by using relevel() function.
+```{r}
+# Setting the baseline 
+train$popularity <- relevel(factor(train$popularity), ref = "low")
+```
+Once the baseline has been specified, we use multinom() function to fit the model and then use summary() function to explore the beta coefficients of the model.
+
+```{r}
+# Fit multinomial logistic regression model using nnet
+nnet_model <- multinom(popularity ~ ., data = train, MaxNWts = 10000)
+
+# View the summary of the model
+summary(nnet_model)
+```
+The output of summary contains the table for coefficients and a table for standard error. Each row in the coefficient table corresponds to the model equation. This ratio of the probability of choosing other popularity classes over the baseline class that is “low” is referred to as relative risk (often described as odds). However, the output of the model is the log of odds. To get the relative risk IE odds ratio, we need to exponentiate the coefficients.
+```{r}
+# Extracting coefficients and exponentiating
+nnet_coefficients <- coef(nnet_model)
+nnet_odds_ratios <- exp(nnet_coefficients)
+
+# Print the exponentiated coefficients
+print(nnet_odds_ratios)
+```
+The relative risk ratio for a one-unit increase in the variables for being in high and medium popularity classes vs. low popularity class is shown in the above output. Here a value of 1 represents that there is no change. However, a value greater than 1 represents an increase and value less than 1 represents a decrease. We can also use probabilities to understand our model.
+
+```{r}
+# Assuming nnet_model is your fitted multinomial logistic regression model using nnet
+predicted_probs <- predict(nnet_model, type = "probs", newdata = train)
+
+# Display the head of the probability table
+head(predicted_probs)
+```
+The table above indicates that the probability of 2986th obviously being in the medium popularity is 64.41%, it being low popularity is 27.28% and it being high popularity is 0.08%. Thus we can conclude that the 2986th observation is medium popular. On a similar note – 29925th observation is medium popularity, 29710th observations is also medium popularity and so on. We will now check the model accuracy by building classification table. So let us first build the classification table for training dataset and calculate the model accuracy.
+
+
+```{r}
+# Assuming nnet_model is your fitted multinomial logistic regression model using nnet
+train$predicted <- predict(nnet_model, newdata = train, type = "class")
+
+# Building the classification table
+ctable <- table(train$popularity, train$predicted)
+
+# Calculating accuracy - sum of diagonal elements divided by total observations
+accuracy <- sum(diag(ctable)) / sum(ctable)
+
+# Print accuracy (percentage)
+cat("Accuracy:", round(accuracy * 100, 2), "%\n")
+
+```
+Accuracy in training dataset is 62.19%. We now repeat the above on the testing dataset.
+
+
+```{r}
+# Assuming nnet_model is your fitted multinomial logistic regression model using nnet
+test$predicted <- predict(nnet_model, newdata = test, type = "class")
+
+# Building the classification table
+ctable <- table(test$popularity, test$predicted)
+
+# Calculating accuracy - sum of diagonal elements divided by total observations
+accuracy <- sum(diag(ctable)) / sum(ctable)
+
+# Print accuracy (percentage)
+cat("Accuracy:", round(accuracy * 100, 2), "%\n")
+```
+We were able to find out a model which predicts the popularity class with a 59.36% accuracy.
+
+k-NN
+```{r}
+model_data <- Spotify %>%
+  mutate(popularity_gp = case_when(
+     track_popularity >= 0 & track_popularity <= 31 ~ "Least_Popularity",
+                  track_popularity >= 32 & track_popularity <= 52 ~ "Average_Popularity",
+                  TRUE ~ "Highest_Popularity"
+  )) %>%
+  select(where(is.numeric), -c( playlist_genre, track_popularity,duration_ms), popularity_gp)
+
+model_data$popularity_gp = as.factor(model_data$popularity_gp)
+str(model_data)
+```
+```{r}
+table(model_data$popularity_gp)
+
+```
+
+```{r}
+set.seed(3245)
+gp <- runif(nrow(model_data))
+model_data <- model_data[order(gp),]
+head(model_data,5)
+```
+```{r}
+summary(model_data[,-11])
+
+```
+```{r}
+normalize <- function(x) {
+  return((x - min(x))/(max(x) - min(x)))
+}
+
+model_norm <- model_data
+model_norm$popularity_gp <- NULL
+model_norm <- as.data.frame(lapply(model_norm,normalize))
+summary(model_norm)
+```
+```{r}
+set.seed(123)
+train_idx <- sample(nrow(model_norm), .80*nrow(model_norm))
+
+model_train <- model_norm[train_idx,]
+model_test <- model_norm[-train_idx,]
+model_train_target <- model_data[train_idx,11]
+model_test_target <- model_data[-train_idx,11]
+
+sqrt(nrow(model_data))
+```
+
+```{r}
+sum(diag(cm))/length(model_test_target)
+```
+
+Implications
+
+We considered this project to be helpful for artists to understand what their audience is looking for and help them improve the popularity of their tracks. It was also meant to help music distributors to streamline their music library.
+The observations we found out from analysis can be used by an artist to improve the popularity of their songs. Creating songs with shorter duration or highly danceable songs have more chance to gain popularity.Maybe even the title of a song might affect the popularity of a song.Artists can try including common words like “Love”,“Like” etc which we found in most of the popular song titles. Maybe those words can help them to be featured in popular playlists.
+Music distributors could focus more on the genres which are popular among spotify users of current generation.Also, the genre R&B looks to gain popularity over the years. Hence, R&B artists can be collaborated for more works. Also more playlists related to danceable songs can also be included considering the popularity of danceable songs.
+Users can make use of our Song Recommendation Engine to get recommendations as per their preferences.
+Limitations
+
+Even though spotify features over a 50 million songs, we are performing our analysis on a dataset with around 32k records.Using a dynamic dataset can improve the results of the analysis.
+Additional attributes can also be considered which can help our analysis like including the number of times a particular song has played or the most downloaded playlists.
+The dataset doesnot include any demographic attribute. Popularity of songs can be affected by the demography of the listeners. People in different countries might have different music tastes. A demographic data can provide more insights.
+We have tried a linear regression model here.A clustering or neural network analysis can also be used and tried to develop a better model.
+We have not considered multicollinearity of the variables while developing the model as the correlation is not that high .But if we can work with much larger dataset and find considerable collinearity between variables , we can take into account multicollinearity effect and try to remove it while building the model.
+

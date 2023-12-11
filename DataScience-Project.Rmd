@@ -1,11 +1,8 @@
 ---
-title: "DataScience-Project"
-author: "Layal Ghryani - Rayanah Alsubaie - Shaymaa Aldabbagh"
+title: "DataScinece-Project"
+author: "Layal Ghryani"
 date: "`r Sys.Date()`"
-output:
-  html_document: default
-  pdf_document: default
-runtime: shiny
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -26,22 +23,31 @@ if (!require("caret")) install.packages("caret")
 library(caret)  
 if (!require("viridis")) install.packages("viridis")
 library(viridis)
-```
-
-```{r}
-# Read the CSV file
-Spotify <- read.csv("spotify_songs.csv")
-Spotify2 <- read.csv("spotify.csv")
-```
-
-
-```{r}
-# Set the maximum file size limit to 30 MB
-options(shiny.maxRequestSize = 30 * 1024^2)
-
-# Load the required packages
-library(shiny)
+if (!require("treemap")) install.packages("treemap")
+library(treemap)
+if (!require("htmltools")) install.packages("htmltools")
 library(htmltools)
+if (!require("tm")) install.packages("tm")
+library(tm)
+if (!require("dplyr")) install.packages("dplyr")
+library(dplyr)
+if (!require("nnet")) install.packages("nnet")
+library(nnet)
+if (!require("reshape2")) install.packages("reshape2")
+library(reshape2)
+if (!require("scales")) install.packages("scales")
+library(scales)
+if (!require("plotly")) install.packages("plotly")
+library(plotly)
+if (!require("heatmaply")) install.packages("heatmaply")
+library(heatmaply)
+if (!require("DT")) install.packages("DT")
+library(DT)
+
+```
+
+```{r }
+options(shiny.maxRequestSize = 30 * 1024^2) # Set the maximum file size limit to 30 MB
 
 # Load datasets
 Spotify <- read.csv("spotify_songs.csv")
@@ -49,6 +55,7 @@ Spotify2 <- read.csv("spotify.csv")
 
 # Define the UI
 ui <- fluidPage(
+  # Custom title and names
   tags$head(
     tags$title("CS 30721: Data Science - Shiny App"),
     tags$style(
@@ -63,12 +70,14 @@ ui <- fluidPage(
   
   wellPanel(
     tags$h1("Predicting Track Popularity: An Analysis of Spotify’s Music Dataset", id = "title"),
+    # Introduction
     tags$hr(),
     HTML("<div style='text-align: center;'>
       <p>Layal Ghryani, Rayanah Alsubaie, Shaymaa Aldabbagh</p>
-      <p>Instructor: Dr. Zain Balfagih</p>
+      <p>Instructor: Dr. Zain Bafaqih</p>
       <p>CS 30721: Data Science</p>
     </div>"),
+    # Add the image
     tags$div(
       style = "text-align: center;",
       img(src = "Spot.png", width = "400px")
@@ -78,157 +87,129 @@ ui <- fluidPage(
   mainPanel(
     tabsetPanel(
       tabPanel("Introduction",
-        h2("Welcome to Our Data Science Final Project "),
-        p("The development of music streaming services has revolutionized the music business by providing consumers with access to an extensive song collection. Spotify has emerged as the leading platform in the worldwide music streaming business, offering millions of tracks and securing a substantial market share. Due to its large user base and comprehensive dataset, Spotify offers a special chance to forecast and analyze track popularity. Music supporters, record labels, and musicians are all very interested in learning what makes a song popular. Precisely anticipating the level of popularity of songs can provide important information about the tastes of the audience, advertising tactics, and the general workings of the music business. This work intends to construct a prediction algorithm that can evaluate track popularity by utilizing Spotify's Music Dataset."),
-        p("Navigate through different tabs to explore data pre-processing, exploratory data analysis, and machine learning modeling.")
+               # Add content for Introduction tab here
+               h2("Welcome to Our Data Science Final Project "),
+               p("The development of music streaming services has revolutionized the music business by providing consumers with access to an extensive song collection. Spotify has emerged as the leading platform in the worldwide music streaming business, offering millions of tracks and securing a substantial market share. Due to its large user base and comprehensive dataset, Spotify offers a special chance to forecast and analyze track popularity. Music supporters, record labels, and musicians are all very interested in learning what makes a song popular. Precisely anticipating the level of popularity of songs can provide important information about the tastes of the audience, advertising tactics, and the general workings of the music business. This work intends to construct a prediction algorithm that can evaluate track popularity by utilizing Spotify's Music Dataset."),
+               p("Navigate through different tabs to explore data pre-processing, exploratory data analysis, and machine learning modeling."),
       ),
       tabPanel("Data Pre-processing",
-        tabsetPanel(
-          tabPanel("Data Source",
-            fluidRow(
-              column(
-                width = 10,
-                height = 20,
-                h4("Importing Dataset"),
-                verbatimTextOutput("importingDatasetOutput"),
-                br(),
-                h4("Dataset Dimensions"),
-                verbatimTextOutput("datasetDimensionsOutput"),
-                br()
-              ),
-              column(
-                width = 10,
-                height = 20
-              )
-            )
-          ),
-          tabPanel("Data Cleaning",
-            fluidRow(
-              column(
-                width = 6,
-                h4("DataSet Cleaning"),
-                tableOutput("DatasetCleaning Table")
-              )
-            ),
-            br(),
-            h4("Analysis of Dataset Structure"),
-            verbatimTextOutput("datasetStructureOutputSpotify"),
-            br(),
-            h4("Identifying Missing Values"),
-            verbatimTextOutput("missingValuesOutputSpotify"),
-            br(),
-            h4("Checking for Duplicate Track IDs"),
-            verbatimTextOutput("duplicateTrackIDsOutputSpotify"),
-            br(),
-            h4("Number of Duplicate Values"),
-            verbatimTextOutput("numDuplicateValuesOutputSpotify"),
-            br(),
-            h4("Removing unnecessary columns"),
-            verbatimTextOutput("cleanedDatasetTableSpotify"),
-            br(),
-            h4("Checking summary of numerical variables"),
-            verbatimTextOutput("summaryNumericalVariablesSpotify"),
-            br(),
-            h4("Analysis of Dataset Structure (Spotify2)"),
-            verbatimTextOutput("datasetStructureOutputSpotify2"),
-            br(),
-            h4("Identifying Missing Values (Spotify2)"),
-            verbatimTextOutput("missingValuesOutputSpotify2"),
-            br(),
-            h4("Number of Duplicate Values (Spotify2)"),
-            verbatimTextOutput("numDuplicateValuesOutputSpotify2"),
-            br(),
-            h4("Checking summary of numerical variables (Spotify2)"),
-            verbatimTextOutput("summaryNumericalVariablesSpotify2")
-          ),
-          tabPanel("Cleaned Data Sets",
-            fluidRow(
-              column(
-                width = 6,
-                h4("Cleaned Dataset - Spotify"),
-                tableOutput("cleanedDatasetTableSpotify"),
-                h5("Dimensions:"),
-                textOutput("dimensionsOutputSpotify")
-              ),
-              column(
-                width = 6,
-                h4("Cleaned Dataset - Spotify2"),
-                tableOutput("cleanedDatasetTableSpotify2"),
-                h5("Dimensions:"),
-                textOutput("dimensionsOutputSpotify2")
-              ),
-              column(
-                width = 12,
-                h4("Frequencies Across Genres - Spotify"),
-                tableOutput("genreFrequenciesTable")
-              ),
-              column(
-                width = 6,
-                h4("Show Dataset - Spotify"),
-                dataTableOutput("showDatasetTableSpotify")
-              ),
-              column(
-                width = 6,
-                h4("Show Dataset - Spotify2"),
-                dataTableOutput("showDatasetTableSpotify2")
-              )
-            )
-          )
-        )
+               # Add content for Data Pre-processing tab here
+               tabsetPanel(
+                 tabPanel("Data Source",
+                          fluidRow(
+                            column(
+                              width = 10,
+                              height = 20,
+                              # fileInput("dataset", "Upload Dataset (CSV file)")
+                              h4("Importing Dataset"),
+                              verbatimTextOutput("importingDatasetOutput"),
+                              br(),
+                              h4("Dataset Dimensions"),
+                              verbatimTextOutput("datasetDimensionsOutput"),
+                              br(),
+                            ),
+                            column(
+                              width = 10,
+                              height = 20,
+                              # actionButton("checkDimensionsButton", "Check Dataset Dimensions")
+                            )
+                          )
+                 ),
+                 tabPanel("Data Cleaning",
+                           # Add content for Data Cleaning tab here
+                           fluidRow(
+                             column(
+                               width = 6,
+                               h4("DataSet Cleaning"),
+                               tableOutput("DatasetCleaning Table")
+                             ),
+                           ),
+                           br(),
+                           h4("Analysis of Dataset Structure"),
+                           verbatimTextOutput("datasetStructureOutputSpotify"),
+                           br(),
+                           h4("Identifying Missing Values"),
+                           verbatimTextOutput("missingValuesOutputSpotify"),
+                           br(),
+                           h4("Checking for Duplicate Track IDs"),
+                           verbatimTextOutput("duplicateTrackIDsOutputSpotify"),
+                           br(),
+                           h4("Number of Duplicate Values"),
+                           verbatimTextOutput("numDuplicateValuesOutputSpotify"),
+                           br(),
+                           h4("Removing unnecessary columns"),
+                           verbatimTextOutput("cleanedDatasetTableSpotify"),
+                           br(),
+                           h4("Checking summary of numerical variables"),
+                           verbatimTextOutput("summaryNumericalVariablesSpotify"),
+                           br(),
+                           h4("Analysis of Dataset Structure (Spotify2)"),
+                           verbatimTextOutput("datasetStructureOutputSpotify2"),
+                           br(),
+                           h4("Identifying Missing Values (Spotify2)"),
+                           verbatimTextOutput("missingValuesOutputSpotify2"),
+                           br(),
+                           h4("Number of Duplicate Values (Spotify2)"),
+                           verbatimTextOutput("numDuplicateValuesOutputSpotify2")
+                 ),
+               )
       ),
+      
       tabPanel("Exploratory Data Analysis",
-        tabsetPanel(
-          tabPanel("Popularity Analysis",
-            tabsetPanel(
-              tabPanel("Analysis",
-              plotOutput("popularityAnalysisOutput")),
-              tabPanel("Top 10 Popular Songs",
-                plotOutput("top10PopularPlot")),
-              tabPanel("Top 10 Least Popular Songs",
-                tableOutput("top10LeastPopularTable")),
-              tabPanel("Popularity vs. Acousticness",
-                plotOutput("popularityAcousticnessPlot")),
-              tabPanel("Top 15 Artists with Most Songs",
-                plotOutput("top15ArtistsPlot")),
-              tabPanel("Popularity vs. Duration",
-                plotOutput("popularityDurationPlot")),
-              tabPanel("Popularity vs. Danceability",
-                plotOutput("popularityDanceabilityPlot"))
-            )
-          ),
-          tabPanel("Correlation Between Attributes",
-            tabsetPanel(
-              tabPanel("Correlation Heatmap",
-                plotOutput("correlationHeatmap")),
-              tabPanel("Loudness vs. Energy",
-                plotOutput("loudnessEnergyPlot")),
-              tabPanel("Change in Duration Over Years",
-                plotOutput("durationOverYearsPlot")),
-              tabPanel("Average Duration by Genre",
-                tableOutput("averageDurationByGenreTable")),
-              tabPanel("Energy vs. Danceability",
-                plotOutput("Workout vibes Plot"))
-            )
-          )
-        )
+               tabsetPanel(
+                 tabPanel("Popularity Analysis",
+                          tabsetPanel(
+                            tabPanel("Analysis",
+                                     tableOutput("tableOutput"),
+                                      DTOutput("modifiedTableOutput"),
+                                     plotlyOutput("treemapPlot")),
+                            tabPanel("Top 10 Popular Songs",
+                                     plotOutput("top10PopularPlot")),
+                            tabPanel("Top 10 Least Popular Songs",
+                                     tableOutput("top10LeastPopularTable")),
+                            tabPanel("Popularity vs. Acousticness",
+                                     plotOutput("popularityAcousticnessPlot")),
+                            tabPanel("Top 15 Artists with Most Songs",
+                                     plotOutput("top15ArtistsPlot")),
+                            tabPanel("Popularity vs. Duration",
+                                     plotOutput("popularityDurationPlot")),
+                            tabPanel("Popularity vs. Danceability",
+                                     plotOutput("popularityDanceabilityPlot"))
+                          )
+                 ),
+                 tabPanel("Correlation Between Attributes",
+                          tabsetPanel(
+                            tabPanel("Correlation Heatmap",
+                                     plotOutput("correlationHeatmap")),
+                            tabPanel("Loudness vs. Energy",
+                                     plotOutput("loudnessEnergyPlot")),
+                            tabPanel("Change in Duration Over Years",
+                                     plotOutput("durationOverYearsPlot")),
+                            tabPanel("Average Duration by Genre",
+                                     tableOutput("averageDurationByGenreTable")),
+                            tabPanel("Energy vs. Danceability",
+                                     plotOutput("WorkoutvibesPlot"))
+                          )
+                 )
+               )
       ),
-      tabPanel("ML Model",
-        tabsetPanel(
-          tabPanel("Machine Learning Results",
-            tableOutput("machineLearningResultsTable"))
-        )
+      
+      tabPanel("ML",
+               tabsetPanel(
+                 tabPanel("Machine Learning Results",
+                         tableOutput("predictedProbsOutput"))
+               )
       )
     ),
+    # Add HTML content using HTML tag functions
     br(),
     h3("Additional Information"),
     p("This Shiny app provides insights into the analysis of Spotify's music dataset."),
     p("Explore different visualizations and tables to understand trends and correlations.")
   )
 )
-
 # Define the server
 server <- function(input, output) {
-
   # Output importing dataset code
   output$importingDatasetOutput <- renderText({
     c("Spotify <- read.csv('spotify_songs.csv')",
@@ -247,9 +228,8 @@ server <- function(input, output) {
       dim(Spotify)  # or use dim(Spotify2) if that's the dataset you want to check
     })
   })
-
   top_10_popular_songs <- head(Spotify[order(-Spotify$track_popularity), c("track_name", "track_artist", "track_popularity")], 10)
-
+  
   # Create a bar plot with varied colors
   output$top10PopularPlot <- renderPlot({
     ggplot(top_10_popular_songs, aes(x = track_name, y = track_popularity, fill = track_artist)) +
@@ -260,21 +240,21 @@ server <- function(input, output) {
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
   })
 
-  # Sort the songs by popularity in ascending order
+#Sort the songs by popularity in ascending order
   top_10_least_popular_songs <- head(Spotify[order(Spotify$track_popularity), c("track_name", "track_artist", "track_popularity")], 10)
 
-  # Display the top 10 least popular songs
+  #Display the top 10 least popular songs
   output$top10LeastPopularTable <- renderTable({
     top_10_least_popular_songs <- head(Spotify[order(Spotify$track_popularity), c("track_name", "track_artist", "track_popularity")], 10)
     top_10_least_popular_songs
   })
-
+  
   spotify2 <- reactive({
     req(input$dataset2)
     read.csv(input$dataset2$datapath)
   })
 
-  # Data Cleaning
+# Data Cleaning
   observe({
     # Analyzing the structure of the dataset
     output$datasetStructureOutputSpotify <- renderPrint({
@@ -289,22 +269,23 @@ server <- function(input, output) {
       col_miss <- colSums(is.na(Spotify))
       col_miss[col_miss > 0]
     })
-
     output$missingValuesOutputSpotify2 <- renderPrint({
       col_miss <- colSums(is.na(Spotify2))
       col_miss[col_miss > 0]
+    
     })
 
     # Find number of duplicate values
     output$numDuplicateValuesOutputSpotify <- renderPrint({
       duplicate_obs <- duplicated(Spotify)
       paste("There are", sum(duplicate_obs), "duplicate observations in the data")
+      
     })
-
-    # Find number of duplicate values
-    output$numDuplicateValuesOutputSpotify2 <- renderPrint({
-      duplicate_obs2 <- duplicated(Spotify2)
-      paste("There are", sum(duplicate_obs2), "duplicate observations in the data")
+     # Find number of duplicate values
+    output$numDuplicateValuesOutputSpotify2<- renderPrint({
+      duplicate_obs <- duplicated(Spotify2)
+      paste("There are", sum(duplicate_obs), "duplicate observations in the data")
+      
     })
 
     # Check for duplicate track ID
@@ -312,152 +293,194 @@ server <- function(input, output) {
       duplicate_id <- duplicated(Spotify$track_id)
       sum(duplicate_id)
     })
+    
 
     # Removing unnecessary columns
-   #() output$cleanedDatasetTableSpotify <- renderTable({
-     # Spotify <- Spotify %>% dplyr::select(-track_id, -track_album_id, -playlist_id)
-   #   Spotify
-  #  })
-    
-    # Checking summary of numerical variables
-    output$summaryNumericalVariablesSpotify <- renderPrint({
-      Spotify_num <- Spotify %>% select_if(is.numeric)
-      summary(Spotify_num)
+    output$cleanedDatasetTableSpotify <- renderTable({
+      Spotify <- Spotify %>% dplyr::select(-track_id, -track_album_id, -playlist_id)
+      Spotify
     })
 
     # Checking summary of numerical variables
-    output$summaryNumericalVariablesSpotify2 <- renderPrint({
-      Spotify2_num <- Spotify2 %>% select_if(is.numeric)
-      summary(Spotify2_num)
-    })
+  output$summaryNumericalVariablesSpotify <- renderPrint({
+    Spotify_num <- Spotify %>% select_if(is.numeric)
+    summary(Spotify_num)
+  })
+  
+  # Checking summary of numerical variables
+  output$summaryNumericalVariablesSpotify2 <- renderPrint({
+    Spotify2_num <- Spotify2 %>% select_if(is.numeric)
+    summary(Spotify2_num)
+  })
+})
 
+  output$popularityAcousticnessPlot <- renderPlot({
+    ggplot(Spotify, aes(x = track_popularity, y = acousticness)) +
+      geom_point() +
+      labs(x = "Track Popularity", y = "Acousticness") +
+      ggtitle("Popularity vs Acousticness")
   })
 
-  # Inside your server function
-
-  # Output for cleaned dataset table - Spotify
-  output$cleanedDatasetTableSpotify <- renderTable({
-    Spotify <- Spotify %>% dplyr::select(-track_id, -track_album_id, -playlist_id)
-    Spotify
+output$popularityDurationPlot <- renderPlot({
+  ggplot(Spotify, aes(x = track_popularity, y = duration_ms)) +
+  geom_point() +
+  labs(x = "Track Popularity", y = "Duration (ms)") +
+  ggtitle("Popularity vs Duration")
+})  
+  
+output$popularityDanceabilityPlot <- renderPlot({
+  ggplot(Spotify, aes(x = track_popularity, y = danceability)) +
+  geom_point() +
+  labs(x = "Popularity", y = "Danceability") +
+  ggtitle("Population versus Danceability")
+}) 
+ # Calculate top 15 artists with most songs
+  most_songs <- reactive({
+    Spotify %>%
+      group_by(track_artist) %>%
+      summarize(total_songs = n_distinct(track_name)) %>%
+      arrange(desc(total_songs)) %>%
+      slice(1:15)
   })
 
-  # Output for cleaned dataset table - Spotify2
-  output$cleanedDatasetTableSpotify2 <- renderTable({
-    Spotify2 <- Spotify2 %>% dplyr::select(-track_id, -track_album_id, -playlist_id)
-    Spotify2
+  # Plot the top 15 artists
+  output$top15ArtistsPlot <- renderPlot({
+    ggplot(most_songs(), aes(x = track_artist, y = total_songs, color = track_artist)) +
+      geom_segment(aes(x = track_artist, xend = track_artist, y = 0, yend = total_songs)) +
+      geom_point(size = 2, color = "maroon") +
+      scale_color_viridis(discrete = TRUE, guide = "none", option = "E") +
+      theme_light(base_size = 12, base_family = "HiraKakuProN-W3") +
+      theme(
+        panel.grid.major.x = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks.x = element_blank()
+      ) +
+      labs(title = "Top 15 Artists with Most Songs",
+           x = "Artist",
+           y = "Total Songs") +
+      coord_flip()
+  }) 
+
+correlation_matrix <- reactive({
+    cor(Spotify[, variables])
   })
 
-  # Output for dimensions - Spotify
-  output$dimensionsOutputSpotify <- renderText({
-    paste("There are ", dim(Spotify)[1], "observations and", dim(Spotify)[2],
-          "columns in our cleaned dataset")
+  # Render the correlation heatmap using ggplot2
+  output$correlationHeatmap <- renderPlot({
+    melted_correlation <- melt(correlation_matrix())
+    ggplot(data = melted_correlation, aes(x = Var1, y = Var2, fill = value)) +
+      geom_tile() +
+      scale_fill_gradient(low = "darkblue", high = "pink") +
+      theme_minimal() +
+      labs(title = "Correlation Heatmap") +
+      geom_text(aes(label = round(value, 2)), color = "white", size = 3) +
+      coord_flip()
+  })
+  
+output$loudnessEnergyPlot <- renderPlot({
+ggplot(Spotify, aes(x = loudness, y = energy)) +
+  geom_point(color = "#FF6F00") +  # Set the color of the points to orange
+  geom_smooth(method = "lm", color = "#FFAB00", se = FALSE) +  # Set the color of the smoother line to a lighter shade of orange
+  scale_color_manual(values = c("#FF6F00", "#FFAB00")) +  # Match the colors for points and line
+  labs(title = "Correlation between Loudness and Energy") +
+  theme_minimal()
+}) 
+
+ # Extract the year from the release date
+  Spotify$track_album_release_year <- as.numeric(format(as.Date(Spotify$track_album_release_date, "%m/%d/%y"), "%Y"))
+
+  # Calculate the average duration for each year
+  average_duration_by_year <- reactive({
+    aggregate(duration_ms ~ track_album_release_year, Spotify, mean)
   })
 
-  # Output for dimensions - Spotify2
-  output$dimensionsOutputSpotify2 <- renderText({
-    paste("There are ", dim(Spotify2)[1], "observations and", dim(Spotify2)[2], 
-          "columns in our cleaned dataset")
+  # Render the duration over years plot using ggplot2
+  output$durationOverYearsPlot <- renderPlot({
+    ggplot(data = average_duration_by_year(), aes(x = track_album_release_year, y = duration_ms)) +
+      geom_line() +
+      labs(x = "Year", y = "Average Duration (ms)", title = "Change in Duration of Songs over Years")
   })
 
-  # Output for frequencies across genres
-  output$genreFrequenciesTable <- renderTable({
-    spotify_genre_frequencies <- Spotify %>% 
-      group_by(playlist_genre) %>% 
-      summarise(total = n())
-    kable(spotify_genre_frequencies) %>%
-      kable_material(c("striped", "hover"))
-  })
-
-  # Output for showing dataset - Spotify
-  output$showDatasetTableSpotify <- renderDataTable({
-    datatable(
-      head(Spotify, 100),
-      class = 'row-border stripe hover compact',
-      rownames = FALSE,
-      autoHideNavigation = TRUE,
-      escape = FALSE
+ #
+spotify_data <- reactive({
+    data.frame(
+      track_name = Spotify$track_name,
+      danceability = Spotify$danceability,
+      energy = Spotify$energy
     )
   })
 
-  # Output for showing dataset - Spotify2
-  output$showDatasetTableSpotify2 <- renderDataTable({
-    datatable(
-      head(Spotify2, 100),
-      class = 'row-border stripe hover compact',
-      rownames = FALSE,
-      autoHideNavigation = TRUE,
-      escape = FALSE
-    )
+  # Create Workout vibes Plot
+  output$WorkoutvibesPlot <- renderPlot({
+    ggplot(spotify_data(), aes(x = danceability, y = energy, color = track_name)) +
+      geom_jitter(show.legend = FALSE) +
+      scale_color_viridis(discrete = TRUE, option = "C") +
+      labs(title = "Workout vibes") +
+      theme_light()
   })
-  # Output for Popularity Analysis
-output$popularityAnalysisOutput <- renderUI({
+
+
+  # Calculate the average duration for each genre
+  average_duration_by_genre <- reactive({
+    aggregate(duration_ms ~ playlist_genre, Spotify, mean)
+  })
+
+  # Render the average duration by genre table
+  output$averageDurationByGenreTable <- renderTable({
+    average_duration_by_genre()
+  })
+  
+# Adding a new column called "popularity" to the Spotify data frame
+observe({
   Spotify <- Spotify %>%
     mutate(popularity = case_when(
       track_popularity <= 30 ~ "low",
       track_popularity > 30 & track_popularity <= 75 ~ "medium",
       track_popularity > 75 ~ "high"
     ))
-
-  # Top tracks in the dataset
-  popular_track <- Spotify %>%
-    filter(popularity == "high") %>%
-    arrange(desc(track_popularity)) %>%
-    distinct(track_name, track_popularity)
-
-  # Display the top tracks in a DataTable
-  datatable(
-    head(popular_track, 10),
-    extensions = 'FixedColumns',
-    options = list(
-      scrollY = "400px",
-      scrollX = TRUE,
-      fixedColumns = TRUE
-    )
-  )
-# Create a summary of top artists within each playlist genre
-  artist_genre <- spotify %>%
-    dplyr::select(playlist_genre, track_artist, track_popularity) %>%
-    group_by(playlist_genre, track_artist) %>%
-    summarise(n = n()) %>%
-    top_n(10, n)
-
-  # Create a treemap visualization
-  tm <- treemap(artist_genre, index = c("playlist_genre", "track_artist"), vSize = "n", vColor = 'playlist_genre', palette = viridisLite::viridis(6), title = "Top 10 Track Artists within each Playlist Genre")
-
-  # Display the treemap
-  tm_plot <- htmltools::tags$img(src = paste("data:image/svg+xml;utf8,", URLencode(print(tm))), style = "width:100%")
-
-  # Combine the DataTable and treemap
-  fluidRow(
-    column(6, popular_track_table),
-    column(6, tm_plot)
-  )
 })
 
-# Output for Correlation Heatmap
-output$correlationHeatmap <- renderPlot({
-  # Select the variables for correlation
-  variables <- c('danceability', 'energy', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms')
+# Display the entire modified Spotify data as a fitted table
+output$modifiedTableOutput <- renderDT({
+  modified_data <- Spotify[, c(1:24)]
+  datatable(
+    modified_data,
+    options = list(
+      pageLength = 1000,
+      scrollY = "500px",  # Example: Set a fixed height for the table
+      searching = TRUE    # Example: Enable search functionality
+      # Add more options as needed
+    )
+  )
+}, server = FALSE)  # Set server = FALSE to process datatable on the client side
 
-  # Compute the correlation matrix
-  correlation_matrix <- cor(Spotify[, variables])
+# Data preprocessing for the first model
+spotify_train <- reactive({
+  req(input$modifiedTableOutput_rows_all)  # Ensure the data is available
+  train_data <- input$modifiedTableOutput_rows_all
+  set.seed(123)
+  train_idx <- sample(nrow(train_data), 0.70 * nrow(train_data))
+  
+  train_data[train_idx, ]
+})
 
-  # Create a heatmap
-  melted_correlation <- reshape2::melt(correlation_matrix)
-  ggplot(data = melted_correlation, aes(x = V1, y = V2, fill = value)) +
-    geom_tile() +
-    scale_fill_gradient(low = "darkblue", high = "pink") +
-    theme_minimal() +
-    labs(title = "Correlation Heatmap") +
-    geom_text(aes(label = round(value, 2)), color = "white", size = 3) + coord_flip()
+# Fit multinomial logistic regression model using nnet
+nnet_model <- reactive({
+  multinom(popularity ~ ., data = spotify_train(), MaxNWts = 10000)
+})
+
+# Assuming nnet_model is your fitted multinomial logistic regression model using nnet
+predicted_probs <- reactive({
+  predict(nnet_model(), type = "probs", newdata = spotify_train())
+})
+
+# Display the head of the predicted probabilities
+output$predictedProbsOutput <- renderTable({
+  head(predicted_probs())
 })
 
 }
-
 # Run the Shiny app
 shinyApp(ui, server)
+
 ```
-
-
-
-
